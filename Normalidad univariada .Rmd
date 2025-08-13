@@ -1,0 +1,225 @@
+---
+title: "Actividad 1.1 Normalidad univariada"
+author: "Mariel Álvarez Salas"
+date: "2025-08-12"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(nortest)     
+
+```
+
+ Sesgo y curtosis en la Normalidad y fuera de ella
+ 1. 
+ A. Dibuja el gráfico de la distribución normal con media cero y desviación estándar 100.
+
+```{r}
+Pob_normal = dnorm(-400:400, 0, 100)
+plot(-400:400, Pob_normal, type="l", main = "Distribución Normal media=0, sigma=100")
+
+```
+La curva teórica Normal(0, 100) es unimodal y simétrica.
+
+ B. Genera 150 datos aleatorios provenientes de una distribución normal con media cero y desviación estándar 100 y dibuja el histograma de los datos generados.
+
+```{r pressure, echo=FALSE}
+x1=rnorm(100,0,100)
+hist(x1, col=0, main = "Distribución empírica de Normal media=0, sigma=100", freq=FALSE)
+```
+ C. Calcula el sesgo y la curtosis de los datos generados:
+
+```{r}
+library(moments)
+sg1 = skewness(x1)
+k1 = kurtosis(x1)
+```
+
+ D. Analiza la normalidad de los datos generados:
+
+```{r}
+jarque.test(x1)
+```
+```{r}
+qqnorm(x1, main = "QQ-Plot de datos Normales")
+qqline(x1, col = "red")
+```
+ E. Interpreta:
+Compara el gráfico de la distribución teórica (punto A) con el gráfico de la distribución empírica (punto B), ¿en qué son iguales y en qué son diferentes?
+
+Son iguales en que ambas son unimodales y simétricas alrededor de 0; la mayor parte de la masa cae aproximadamente entre ±200, lo que cuadra con 𝜎 = 100 (≈95% en el rango [ − 196 , 196 ]). Por otro lado, son diferentes en que el histograma empírico muestra variación y en el efecto de las barras se observa más información, aparecen algunos valores más extremos y que la curva teórica no “fluctúa” porque es una densidad suave.
+
+Relaciona la distribución empírica (punto B) con los valores de sesgo y curtosis (punto C) y el QQPlot y la prueba de normalidad (punto D):
+
+El sesgo estimado es cercano a 0 (lo que indica simetría), y el exceso de curtosis también es pequeño (pues las colas parecidas a la Normal); por eso la forma del histograma luce muy próxima a la curva teórica. El QQ-plot es casi lineal, con ligeras desviaciones solo en las colas. La prueba de Jarque–Bera arroja p = 0.431 entonces no se rechaza la normalidad al 5%. Esto es consistente con el QQ-plot y con los momentos (sesgo ≈ 0, exceso de curtosis ≈ 0). Para esta muestra, todas las evidencias son compatibles con normalidad; las pequeñas discrepancias en extremos se explican por variación muestral y no indican una desviación sistemática.
+
+ 2. Fuera de la normalidad
+
+ Distribuciones seleccionadas:
+- Muy sesgada a la derecha: Exponencial 𝜆 = 1 / 50 λ=1/50 (media 50). 
+- Ligeramente sesgada a la derecha: Gamma shape = 20 shape=20, scale = 5 scale=5 
+- Sesgada a la izquierda: Weibull shape = 5 shape=5, scale = 100 scale=100 
+```{r}
+analiza_dist <- function(x, dens_fun = NULL, main_tag = "", teor_line = TRUE) {
+  hist(x, freq=FALSE, col=0, main = paste0("Histograma: ", main_tag), xlab="x")
+  lines(density(x), col="red", lwd=2)
+  if (!is.null(dens_fun) && teor_line) {
+    xr <- seq(min(x), max(x), length.out = 400)
+    lines(xr, dens_fun(xr), col="blue", lwd=2)
+    legend("topright", c("Densidad empírica","Teórica"),
+           col=c("red","blue"), lwd=2, bty="n")
+  }
+
+  s <- skewness(x)
+  k <- kurtosis(x)  
+  
+  jb <- jarque.test(x)
+  qqnorm(x, main = paste0("QQ-Plot: ", main_tag)); qqline(x, col="red")
+  list(skew=s, kurt_excess=k, jb=jb)
+}
+```
+
+ Exponencial (muy sesgada a la derecha)
+Pasos A–B–C–D
+
+```{r}
+n  <- 100
+lam <- 1/50
+x_exp <- rexp(n, rate = lam)
+res_exp <- analiza_dist(
+  x_exp,
+  dens_fun = function(z) dexp(z, rate = lam),
+  main_tag = "Exponencial"
+)
+res_exp$jb
+c(Sesgo = res_exp$skew, CurtosisExceso = res_exp$kurt_excess)
+
+
+```
+5. interpretación: La Exponencial tiene cola derecha muy larga (sesgo positivo grande, curtosis alta). El QQ-plot se curva arriba a la derecha respecto a la normal y Jarque–Bera rechaza la normalidad.
+
+ Gamma (ligeramente sesgada a la derecha)
+A–B–C–D
+```{r}
+n <- 100
+shape <- 20; scale <- 5
+x_gam <- rgamma(n, shape = shape, scale = scale)
+res_gam <- analiza_dist(
+  x_gam,
+  dens_fun = function(z) dgamma(z, shape = shape, scale = scale),
+  main_tag = "Gamma"
+)
+res_gam$jb
+c(Sesgo = res_gam$skew, CurtosisExceso = res_gam$kurt_excess)
+
+```
+E. Interpretación:Se percibe que la distribución Gamma con un shape grande tiene sesgo positivo pequeño. El QQ-plot aún se aparta en colas derechas y Jarque–Bera rechaza normalidad pero con p-valores menos extremos que en la distribucion Exponencial anterior.
+
+ Weibull (sesgada a la izquierda)
+A–B–C–D
+```{r}
+n <- 100
+shape_w <- 5; scale_w <- 100
+x_wei <- rweibull(n, shape = shape_w, scale = scale_w)
+res_wei <- analiza_dist(
+  x_wei,
+  dens_fun = function(z) dweibull(z, shape = shape_w, scale = scale_w),
+  main_tag = "Weibull"
+)
+res_wei$jb
+c(Sesgo = res_wei$skew, CurtosisExceso = res_wei$kurt_excess)
+
+```
+ Interpretacion: La muestra Weibull presenta sesgo negativo leve y aunque Jarque Bera no rechaza, los momentos (sesgo<0, exceso de curtosis>0) y la forma de la densidad son compatibles con una no-normalidad.
+
+ Probando normalidad en una base de datos
+```{r}
+data(cars)      
+str(cars)
+speed <- cars$speed
+dist  <- cars$dist
+
+```
+
+ Prueba normalidad univariada de la velocidad y distancia hasta detenerse. 
+```{r}
+shapiro.test(speed)
+shapiro.test(dist)
+```
+```{r}
+ad.test(speed)
+ad.test(dist)
+```
+
+```{r}
+lillie.test(speed)
+lillie.test(dist)
+
+```
+
+```{r}
+jarque.test(speed)
+jarque.test(dist)
+```
+ Elabora el QQPlot (qqnorm(datos) y qqline(datos)) para cada variable
+```{r}
+par(mfrow=c(1,))
+qqnorm(speed, main="QQ-Plot speed"); qqline(speed, col="red")
+qqnorm(dist,  main="QQ-Plot dist");  qqline(dist,  col="red")
+par(mfrow=c(1,1))
+
+```
+ La variable Speed se observa de estar cera a la linea normal, miesntras muchos puntos de la variable Dist se muestran dispersos el lo alto.
+ 
+ Calcula el coeficiente de sesgo y el coeficiente de curtosis (sugerencia: usar la librería e1071, usar: skeness y kurtosis) para cada variable.
+
+ Calcula y compara las medidas de media, mediana y rango medio para cada variable.
+
+```{r}
+sk_sp  <- e1071::skewness(speed, type = 2)
+ku_sp  <- e1071::kurtosis(speed, type = 2)    
+sk_ds  <- e1071::skewness(dist, type = 2)
+ku_ds  <- e1071::kurtosis(dist, type = 2)
+
+mr_sp <- (min(speed)+max(speed))/2  
+mr_ds <- (min(dist)+max(dist))/2
+
+list(
+  speed = c(Sesgo=sk_sp, Curtosis=ku_sp, Media=mean(speed),
+            Mediana=median(speed), RangoMedio=mr_sp),
+  dist  = c(Sesgo=sk_ds, Curtosis=ku_ds, Media=mean(dist),
+            Mediana=median(dist), RangoMedio=mr_ds)
+)
+
+```
+ Ealbora el diagrama de box plot para cada variable.
+```{r}
+par(mfrow=c(1,2))
+boxplot(speed, main="Boxplot speed")
+boxplot(dist,  main="Boxplot dist")
+par(mfrow=c(1,1))
+```
+Al ver los boxplots hacen mas sentido la distribución. Speed se muestra consistente y centrada, mientras qeu dist se muestra sezgada a la derecha y con un outlier.
+
+Realiza el histograma y su distribución teórica de probabilidad 
+
+```{r}
+hist(speed, freq=FALSE, main="speed", col=0, xlab="speed")
+lines(density(speed), col="red", lwd=2)
+curve(dnorm(x, mean=mean(speed), sd=sd(speed)),
+      from=min(speed), to=max(speed), add=TRUE, col="blue", lwd=2)
+
+hist(dist, freq=FALSE, main="dist", col=0, xlab="dist")
+lines(density(dist), col="red", lwd=2)
+curve(dnorm(x, mean=mean(dist), sd=sd(dist)),
+      from=min(dist), to=max(dist), add=TRUE, col="blue", lwd=2)
+
+par(mfrow=c(1,1))
+
+```
+ # Conclusion final
+En la sección 1 (normal simulada) todo es consistente con normalidad: Jarque–Bera no rechaza y el QQ-plot es prácticamente lineal. En la sección 2 (no normales), la Exponencial es claramente no normal, la Gamma muestra una desviación leve con sesgo positivo pequeño y la Weibull presenta un sesgo negativo ligero, con JB sin rechazo, es decir, una desviación suave. En cars, la variable speed es compatible con la normalidad por todas las pruebas y gráficos, mientras que dist muestra evidencia de no normalidad con sesgo a la derecha (Shapiro y Lilliefors rechazan, AD queda al límite y JB está cercano al umbral), por lo que conviene considerar transformaciones/ estandarizaciones.
+

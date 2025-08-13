@@ -1,0 +1,375 @@
+---
+title: "Actividad 1.2 Normalidad univariada. Transformaciones para normalidad"
+author: "Mariel Álvarez Salas"
+date: "2025-08-13"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parte 1
+1. Accede a los datos de cars en R. La base de datos cars dan la velocidad de los automóviles y las distancias necesarias para detenerse de modelos existentes en 1920.
+- Prueba normalidad univariada de la velocidad y distancia hasta detenerse  (selecciona uno de los métodos vistos en clase)
+- Grafica los datos y su respectivo QQPlot: qqnorm(datos) y qqline(datos) para cada variable
+- Calcula el coeficiente de sesgo y el coeficiente de curtosis (sugerencia: usar la librería e1071, usar: skeness y kurtosis) para cada variable.
+- Compara las medidas de media, mediana y rango medio para cada variable.
+- Realiza el histograma y su distribución teórica de probabilidad (sugerencia, adapta el código:
+hist(datos,freq=FALSE)
+lines(density(datos),col="red")
+curve(dnorm(x,mean=mean(datos),sd=sd(datos)), from=min(datos), to=max(datos), add=TRUE, col="blue",lwd=2)
+2. Comenta cada gráfico y resultado que hayas obtenido. Emite una conclusión final sobre la normalidad de los datos.
+
+## Parte 2
+
+1 . Con la base de datos car efectúa una transformación de los datos que te garantice normalidad en ambas variables.
+A) Encuentra el valor de lamda en la transformación Box-Cox para el modelo lineal donde Y sea la distancia y X la velocidad.
+
+B) Utiliza a transformación exacta y el aproximada de acuerdo con la transformación de Box y Cox.
+
+C) Escribe las ecuaciones de las transformaciones encontradas.
+
+D) Analiza la normalidad de las transformaciones obtenidas. Utiliza como argumento de normalidad:
+
+E) Compara las medidas: Mínimo, máximo, media, mediana, cuartil 1 y cuartil 3, sesgo y curtosis.
+
+F) Obten el histograma de los 2 modelos obtenidos (exacto y aproximado) y los datos originales.
+
+G) Realiza algunas pruebas de normalidad para los datos transformados.
+
+H) Detecta anomalías y corrige tu base de datos tranformado (datos atípicos, ceros anámalos, etc): solo en caso de no tener normalidad en las transformaciones. En caso de corrección de base de datos, vuelve a buscar la para tus datos.
+
+```{r cars}
+# A)
+library(MASS)
+#speed
+#nota interna: speed ya se muestra normal (es visto en la parte 1, tarea anterior). Las transformaciones sobre esta variable se efectuaran por motivos de estudio / experimento
+bc<-boxcox((cars[ ,1]+1)~1)
+l_speed=bc$x[which.max(bc$y)]
+cat("Mejor lambda para speed:", l_speed, "\n")
+```
+
+```{r pressure, echo=FALSE}
+# A)
+#dist
+bc<-boxcox((cars[ ,2]+1)~1)
+l_dist=bc$x[which.max(bc$y)]
+cat("Mejor lambda para dist:", l_dist, "\n")
+
+```
+```{r}
+# B)
+# speed
+
+par(mfrow = c(1, 3))
+
+speed_transform_exacta <- ((cars[,1] + 1)^l_speed - 1) / l_speed
+hist(speed_transform_exacta, main = "speed_transform exacta", xlab = "speed transform exacta")
+
+speed_transform_aproximada <- ((cars[,1] + 1)^1 - 1) / 1
+hist(speed_transform_aproximada, main = "speed_transform aproximada", xlab = "speed transform aproximada")
+
+hist(cars[,1], main = "speed normal", xlab = "speed")
+
+par(mfrow = c(1, 3))
+```
+C) Ecuación encontrada:
+Exacta:
+
+\[
+\text{speed\_transformm\_exacta} = \frac{(cars[,1] + 1)^{1.030303} - 1}{1.030303}
+\]
+
+Aproximada:
+
+\[
+\text{speed\_transform\_aprox} = \frac{(cars[,1] + 1)^1 - 1}{1}
+\]
+
+No es de sorprenderse que lambda sea 1. Significa que la potencia óptima está en el valor que corresponde a la identidad ya que desde antes era normal.
+
+```{r}
+library(moments)
+stats_summary <- function(x) {
+  c(
+    Min = min(x),
+    Max = max(x),
+    Mean = mean(x),
+    Median = median(x),
+    Q1 = quantile(x, 0.25),
+    Q3 = quantile(x, 0.75),
+    Skewness = skewness(x),
+    Kurtosis = kurtosis(x)
+  )
+}
+
+speed_stats <- data.frame(
+  Variable = c("speed_transform_exacta", "speed_transform_aproximada"),
+  rbind(
+    stats_summary(speed_transform_exacta),
+    stats_summary(speed_transform_aproximada)
+  )
+)
+
+print(speed_stats)
+```
+
+```{r}
+library(nortest)  
+run_normality_tests <- function(x) {
+  sw <- shapiro.test(x)
+  ad <- ad.test(x)
+  
+  data.frame(
+    Test = c("Shapiro-Wilk", "Anderson-Darling"),
+    Statistic = c(sw$statistic, ad$statistic),
+    P_value = c(sw$p.value, ad$p.value)
+  )
+}
+
+res_speed_exacta <- run_normality_tests(speed_transform_exacta)
+res_speed_exacta$Variable <- "res_speed_exacta"
+
+res_speed_aprox <- run_normality_tests(speed_transform_aproximada)
+res_speed_aprox$Variable <- "res_speed_aprox"
+
+results <- rbind(res_speed_exacta, res_speed_aprox)
+
+print(results)
+```
+
+Speed se muestra normal de nuevo como su distribución original.
+
+```{r}
+# B)
+# dist
+par(mfrow = c(1, 3))
+
+dist_transform_exacta <- ((cars[, 2] + 1)^l_dist - 1) / l_dist
+hist(dist_transform_exacta, main = "dist_transform exacta", xlab = "dist_transform_exacta")
+
+dist_transform_approx <- ((cars[, 2] + 1)^0.5 - 1) / 0.5
+hist(dist_transform_approx, main = "dist_transform aproximada", xlab = "dist_transform_approx")
+
+hist(cars[,2], main = "dist normal", xlab = "dist")
+
+par(mfrow = c(1, 3))
+
+```
+C) Ecuación encontrada:
+Exacta:
+
+\[
+\text{speed\_transform\_exacta} = \frac{(cars[,1] + 1)^{0.4646465} - 1}{0.4646465}
+\]
+Normal: 
+\[
+\text{speed\_transform\_aprox} = \frac{(cars[,1] + 1)^{0.5} - 1}{0.5}
+\]
+
+Dist no era normal, por lo que lambda es desigual a 1.
+
+```{r}
+dist_stats <- data.frame(
+  Variable = c("dist_transform_exacta", "dist_transform_aproximada"),
+  rbind(
+    stats_summary(dist_transform_exacta),
+    stats_summary(dist_transform_approx)
+  )
+)
+
+print(dist_stats)
+```
+```{r}
+res_dist_exacta <- run_normality_tests(dist_transform_exacta)
+res_dist_exacta$Variable <- "dist_transform_exacta"
+
+res_dist_aprox <- run_normality_tests(dist_transform_approx)
+res_dist_aprox$Variable <- "dist_transform_aproximada"
+
+results <- rbind(res_dist_exacta, res_dist_aprox)
+
+print(results)
+```
+Analisis de parte 2.1: 
+Speed: Se encuentra normalidad en las transformaciones y simetría en el sezgo de ambas (–0.091, -0.114) es aproximadamente simetría.
+
+Dist: Ambas transformaciones se muestran prácticamente normales, el p-valor muy alto indica que no hay evidencia para rechazar la normalidad. La curtosis es muy cercana a la normal (2.78 → 3).
+
+## 2. Utiliza la transformación de Yeo Johnson y encuentra el valor de lambda que maximiza el valor p.
+Escribe la ecuación de la transformación encontrada.
+Analiza la normalidad de la transformación obtenida.
+```{r}
+library(VGAM)
+
+lambdas <- seq(-2, 2, 0.01)
+
+resultados <- data.frame(lambda = lambdas, p_value = NA)
+#speed
+speed <- cars[, 1]
+
+for (i in seq_along(lambdas)) {
+  y_trans <- yeo.johnson(speed, lambda = lambdas[i])
+  test <- shapiro.test(y_trans)
+  resultados$p_value[i] <- test$p.value
+}
+
+mejor_speed <- resultados[which.max(resultados$p_value), ]
+cat("Mejor lambda para speed:", mejor_speed$lambda, 
+    "con p-value:", mejor_speed$p_value , "\n")
+
+#dist
+dist <- cars[, 2]
+
+for (i in seq_along(lambdas)) {
+  y_trans <- yeo.johnson(dist, lambda = lambdas[i])
+  test <- shapiro.test(y_trans)
+  resultados$p_value[i] <- test$p.value
+}
+
+mejor_dist <- resultados[which.max(resultados$p_value), ]
+cat("Mejor lambda para dist:", mejor_dist$lambda, 
+    "con p-value:", mejor_dist$p_value)
+
+```
+\[
+\text{Para speed, con } \lambda = 1.05 \quad (\text{Yeo–Johnson}):
+\quad z = \frac{( \text{speed} + 1)^{1.05} - 1}{1.05}
+\]
+El lambda de speed vuelve a hacer 1 como es esperado.
+
+\[
+\text{Para dist, con } \lambda = 0.48 \quad (\text{Yeo–Johnson}):
+\quad z = \frac{( \text{dist} + 1)^{0.48} - 1}{0.48}
+\]
+```{r}
+library(car)
+speed_yj <- yjPower(cars[, 1], 1.05)
+dist_yj  <- yjPower(cars[, 2], 0.48)
+```
+
+```{r}
+shapiro.test(speed_yj)
+shapiro.test(dist_yj)
+
+par(mfrow=c(1,2))
+qqnorm(speed_yj, main="QQPlot speed (YJ λ=1.05)"); qqline(speed_yj, col="red")
+qqnorm(dist_yj,  main="QQPlot dist (YJ λ=0.48)");  qqline(dist_yj, col="red")
+par(mfrow=c(1,1))
+
+hist(speed_yj, freq=FALSE, main="speed (YJ λ=1.05)")
+lines(density(speed_yj), col="red")
+curve(dnorm(x, mean=mean(speed_yj), sd=sd(speed_yj)),
+      add=TRUE, col="blue", lwd=2)
+
+hist(dist_yj, freq=FALSE, main="dist (YJ λ=0.48)")
+lines(density(dist_yj), col="red")
+curve(dnorm(x, mean=mean(dist_yj), sd=sd(dist_yj)),
+      add=TRUE, col="blue", lwd=2)
+
+library(e1071)
+data.frame(
+  variable = c("speed_yj", "dist_yj"),
+  skewness = c(skewness(speed_yj, type=2), skewness(dist_yj, type=2)),
+  kurtosis = c(kurtosis(speed_yj, type=2), kurtosis(dist_yj, type=2))
+)
+```
+La transformación de Yeo–Johnson con λ=0.48 para la variable dist se considera la más adecuada, ya que logró el p-valor más alto en la prueba de Shapiro–Wilk (p≈0.9939), redujo el sesgo prácticamente a cero (− 0.0117) y presentó una curtosis en exceso muy cercana a la normal (−0.133), equivalente a 2.867 en curtosis poblacional. Esto indica una distribución simétrica con un ajuste  a la normalidad tanto estadísticamente como visualmente en el QQPlot. Aunque para speed las transformaciones Box–Cox y Yeo–Johnson mostraron resultados muy similares, la elección de Yeo–Johnson en ambas variables permite mantener consistencia metodológica y garantiza que los datos cumplan con el supuesto de normalidad de forma óptima.
+
+
+# 3. Con la mejor transformación (punto 3), encuentra realiza la regresión lineal simple entre la mejor transformación y la distancia:
+- Escribe el modelo lineal para la transformación en función de la velocidad.
+- Grafica los datos y el modelo (ecuación) de transformación elegida vs velocidad.
+- Analiza significancia del modelo (individual, conjunta y coeficiente de correlación)
+- Analiza validez del modelo: normalidad de los residuos, homocedasticidad e independencia. Indica si hay candidatos a datos atípicos o influyentes en la regresión.
+- Despeja la distancia del modelo obtenido entre la transformación y la velocidad. Obtendrás el modelo no lineal que relaciona la distancia con la velocidad.
+- Grafica los datos y el modelo de la distancia en función de la velocidad.
+```{r}
+mod <- lm(dist_yj ~ cars$speed)
+summary(mod)
+```
+```{r}
+b0 <- coef(mod)[1]; b1 <- coef(mod)[2]
+cat(sprintf("Modelo: z = %.4f + %.4f * speed\n", b0, b1))
+plot(cars$speed, dist_yj, pch=19, col="gray40",
+     xlab="speed", ylab="z = YJ(dist; λ=0.48)",
+     main="Transformación elegida vs speed")
+abline(mod, col="red", lwd=2)
+legend("topleft", bty="n",
+       legend=sprintf("z = %.3f + %.3f*speed", b0, b1), text.col="red")
+
+```
+```{r}
+(fstat <- summary(mod)$fstatistic)
+pf(fstat[1], fstat[2], fstat[3], lower.tail = FALSE)   
+cor(cars$speed, dist_yj)
+cor.test(cars$speed, dist_yj)
+```
+validez del modelo:
+
+```{r}
+res <- residuals(mod)
+
+library(lmtest)   
+
+shapiro.test(res)
+par(mfrow=c(1,2))
+qqnorm(res, main="QQ residuos"); qqline(res, col="red")
+hist(res, main="Hist residuos", xlab="residuos")
+par(mfrow=c(1,1))
+
+bptest(mod)
+
+durbinWatsonTest(mod)
+```
+Despeja la distancia del modelo obtenido entre la transformación y la velocidad. Obtendrás el modelo no lineal que relaciona la distancia con la velocidad.
+
+```{r}
+grid_speed <- seq(min(cars$speed), max(cars$speed), length.out = 200)
+z_hat      <- b0 + b1*grid_speed
+
+yjPower_inverse <- function(z, lambda) {
+  y_inv <- numeric(length(z))
+  
+  pos <- z >= 0
+  neg <- !pos
+  
+  if (lambda != 0) {
+    y_inv[pos] <- (lambda * z[pos] + 1)^(1/lambda) - 1
+  } else {
+    y_inv[pos] <- exp(z[pos]) - 1
+  }
+  
+  if (lambda != 2) {
+    y_inv[neg] <- 1 - ((2 - lambda) * (-z[neg]) + 1)^(1/(2 - lambda))
+  } else {
+    y_inv[neg] <- 1 - exp(-z[neg])
+  }
+  
+  return(y_inv)
+}
+
+
+dist_hat <- yjPower_inverse(z_hat, 0.48)
+
+plot(cars$speed, cars$dist, pch=19, col="gray40",
+     xlab="speed", ylab="dist",
+     main="Modelo no lineal en escala original")
+lines(grid_speed, dist_hat, col="blue", lwd=2)
+legend("topleft", bty="n",
+       legend=c("Datos", "Modelo (inversa YJ)"),
+       col=c("gray40","blue"), lwd=c(NA,2), pch=c(19,NA))
+
+```
+
+Analisis del modelo
+
+El modelo presenta un R2 de 0.7035, explicando aproximadamente el 70 % de la variabilidad en la respuesta. El estadístico F (117.3,  p<0.001) confirma la significancia conjunta del modelo.
+
+En la validación de supuestos:
+- Normalidad de residuos: Shapiro–Wilk p=0.3122, no se rechaza normalidad
+- Homoscedasticidad: Breusch–Pagan 𝑝 = 0.8976 p=0.8976, no hay evidencia de heterocedasticidad. 
+- Independencia: Durbin–Watson DW=1.94, p=0.704 → no hay autocorrelación.
+
+En conclusión, el modelo es estadísticamente significativo, cumple los supuestos básicos y es adecuado para describir la relación positiva entre la velocidad y la distancia transformada. Al aplicar la inversa de la transformación Yeo–Johnson, se obtiene un modelo no lineal válido para predecir la distancia original en función de la velocidad.
